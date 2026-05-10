@@ -584,7 +584,6 @@ const NEGATIVE_CAP_HEIGHT = 0.8;
 const WRAP_INSET = 0.15;
 const CELL_NOMINAL_VOLTAGE = 3.6;
 const CELL_CAPACITY_AH = 5.0;
-const CELL_WEIGHT_G = 70;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a2e);
@@ -801,10 +800,10 @@ function highlightCells(cells, side) {
   }
 }
 
-const nickelMaterial = new THREE.MeshStandardMaterial({
-  color: 0xc8c8c8,
-  metalness: 0.9,
-  roughness: 0.2,
+const nickelMaterial = new THREE.MeshPhongMaterial({
+  color: 0xc0c0c0,
+  specular: 0xcccccc,
+  shininess: 100,
   side: THREE.DoubleSide,
 });
 
@@ -829,6 +828,8 @@ const STRIP_Y_BOTTOM = -(CELL_HEIGHT / 2 + NEGATIVE_CAP_HEIGHT + 0.3);
 
 let packPositiveStrip = null;
 let packNegativeStrip = null;
+let packPositiveGroup = null;
+let packNegativeGroup = null;
 
 const packGroup = new THREE.Group();
 scene.add(packGroup);
@@ -874,7 +875,7 @@ function createNickelStrip(cell1, cell2, side) {
   mesh.position.set(pos1.x, yOffset, pos1.z);
 
   const weldGeo = new THREE.CylinderGeometry(2, 2, STRIP_THICKNESS + 0.3, 16);
-  const weldMat = new THREE.MeshStandardMaterial({ color: 0x999999, metalness: 0.8, roughness: 0.4 });
+  const weldMat = new THREE.MeshPhongMaterial({ color: 0xb0b0b0, specular: 0xcccccc, shininess: 80 });
 
   const weldDir = side === 'bottom' ? -1 : 1;
   const weld1 = new THREE.Mesh(weldGeo, weldMat);
@@ -902,8 +903,8 @@ function createNickelStrip(cell1, cell2, side) {
 }
 
 function removeNickelStrip(stripGroup) {
-  if (packPositiveStrip === stripGroup) clearTerminal('positive');
-  if (packNegativeStrip === stripGroup) clearTerminal('negative');
+  if (packPositiveGroup && packPositiveGroup.has(stripGroup)) clearTerminal('positive');
+  if (packNegativeGroup && packNegativeGroup.has(stripGroup)) clearTerminal('negative');
   stripsGroup.remove(stripGroup);
   const idx = nickelStrips.indexOf(stripGroup);
   if (idx !== -1) nickelStrips.splice(idx, 1);
@@ -913,61 +914,101 @@ function removeNickelStrip(stripGroup) {
   updateAnalysis();
 }
 
+function getConnectedStrips(stripGroup) {
+  const side = stripGroup.userData.side;
+  const connected = new Set();
+  const queue = [stripGroup];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (connected.has(current)) continue;
+    connected.add(current);
+    const cells = [current.userData.cell1, current.userData.cell2];
+    for (const cell of cells) {
+      for (const strip of nickelStrips) {
+        if (connected.has(strip)) continue;
+        if (strip.userData.side !== side) continue;
+        if (strip.userData.cell1 === cell || strip.userData.cell2 === cell) {
+          queue.push(strip);
+        }
+      }
+    }
+  }
+  return connected;
+}
+
 function setTerminal(stripGroup, polarity) {
+  const connected = getConnectedStrips(stripGroup);
   if (polarity === 'positive') {
     if (packPositiveStrip) clearTerminal('positive');
-    if (packNegativeStrip === stripGroup) clearTerminal('negative');
+    for (const s of connected) {
+      if (packNegativeStrip === s) clearTerminal('negative');
+    }
     packPositiveStrip = stripGroup;
-    applyTerminalVisual(stripGroup, terminalPositiveMaterial, '+', 0xe63946);
+    packPositiveGroup = connected;
+    applyTerminalVisualGroup(connected, terminalPositiveMaterial, '+', 0xe63946);
   } else {
     if (packNegativeStrip) clearTerminal('negative');
-    if (packPositiveStrip === stripGroup) clearTerminal('positive');
+    for (const s of connected) {
+      if (packPositiveStrip === s) clearTerminal('positive');
+    }
     packNegativeStrip = stripGroup;
-    applyTerminalVisual(stripGroup, terminalNegativeMaterial, '−', 0x4a90d9);
+    packNegativeGroup = connected;
+    applyTerminalVisualGroup(connected, terminalNegativeMaterial, '−', 0x4a90d9);
   }
   updateAnalysis();
 }
 
 function clearTerminal(polarity) {
-  const strip = polarity === 'positive' ? packPositiveStrip : packNegativeStrip;
-  if (!strip) return;
+  const group = polarity === 'positive' ? packPositiveGroup : packNegativeGroup;
+  if (!group) return;
 
-  if (polarity === 'positive') packPositiveStrip = null;
-  else packNegativeStrip = null;
+  if (polarity === 'positive') { packPositiveStrip = null; packPositiveGroup = null; }
+  else { packNegativeStrip = null; packNegativeGroup = null; }
 
-  const mainMesh = strip.children.find(c => c.userData.isStripMesh);
-  if (mainMesh) mainMesh.material = nickelMaterial;
+  for (const strip of group) {
+    const mainMesh = strip.children.find(c => c.userData.isStripMesh);
+    if (mainMesh) mainMesh.material = nickelMaterial;
 
-  for (let i = strip.children.length - 1; i >= 0; i--) {
-    if (strip.children[i].userData.isTerminalLabel) {
-      strip.children[i].geometry.dispose();
-      strip.children[i].material.dispose();
-      strip.remove(strip.children[i]);
+    for (let i = strip.children.length - 1; i >= 0; i--) {
+      if (strip.children[i].userData.isTerminalLabel) {
+        strip.children[i].geometry.dispose();
+        strip.children[i].material.dispose();
+        strip.remove(strip.children[i]);
+      }
     }
   }
   updateAnalysis();
 }
 
-function applyTerminalVisual(stripGroup, material, symbol, color) {
-  const mainMesh = stripGroup.children.find(c => c.userData.isStripMesh);
-  if (mainMesh) mainMesh.material = material;
+function applyTerminalVisualGroup(strips, material, symbol, color) {
+  let sumX = 0, sumZ = 0, count = 0;
+  let side = 'top';
 
-  for (let i = stripGroup.children.length - 1; i >= 0; i--) {
-    if (stripGroup.children[i].userData.isTerminalLabel) {
-      stripGroup.children[i].geometry.dispose();
-      stripGroup.children[i].material.dispose();
-      stripGroup.remove(stripGroup.children[i]);
+  for (const stripGroup of strips) {
+    const mainMesh = stripGroup.children.find(c => c.userData.isStripMesh);
+    if (mainMesh) mainMesh.material = material;
+
+    for (let i = stripGroup.children.length - 1; i >= 0; i--) {
+      if (stripGroup.children[i].userData.isTerminalLabel) {
+        stripGroup.children[i].geometry.dispose();
+        stripGroup.children[i].material.dispose();
+        stripGroup.remove(stripGroup.children[i]);
+      }
     }
+
+    side = stripGroup.userData.side;
+    const c1 = stripGroup.userData.cell1;
+    const c2 = stripGroup.userData.cell2;
+    sumX += c1.position.x + c2.position.x;
+    sumZ += c1.position.z + c2.position.z;
+    count += 2;
   }
 
-  const cell1 = stripGroup.userData.cell1;
-  const cell2 = stripGroup.userData.cell2;
-  const side = stripGroup.userData.side;
-  const midX = (cell1.position.x + cell2.position.x) / 2;
-  const midZ = (cell1.position.z + cell2.position.z) / 2;
-  const labelY = side === 'bottom'
-    ? STRIP_Y_BOTTOM - 12
-    : STRIP_Y_TOP + 12;
+  if (count === 0) return;
+
+  const midX = sumX / count;
+  const midZ = sumZ / count;
+  const labelY = side === 'bottom' ? STRIP_Y_BOTTOM - 12 : STRIP_Y_TOP + 12;
 
   const canvas = document.createElement('canvas');
   canvas.width = 128;
@@ -992,7 +1033,9 @@ function applyTerminalVisual(stripGroup, material, symbol, color) {
   sprite.position.set(midX, labelY, midZ);
   sprite.scale.set(14, 14, 1);
   sprite.userData.isTerminalLabel = true;
-  stripGroup.add(sprite);
+
+  const firstStrip = [...strips][0];
+  firstStrip.add(sprite);
 }
 
 function getStripsForCell(cell) {
@@ -1017,6 +1060,8 @@ function buildPack() {
   nickelStrips.length = 0;
   packPositiveStrip = null;
   packNegativeStrip = null;
+  packPositiveGroup = null;
+  packNegativeGroup = null;
   stripConnectMode = false;
   stripSourceCell = null;
   document.getElementById('status-bar').style.display = 'none';
@@ -1151,8 +1196,8 @@ renderer.domElement.addEventListener('contextmenu', (e) => {
   const hitStrip = stripIntersects.length > 0 ? getStripGroup(stripIntersects[0].object) : null;
 
   function showTerminalOptions(strip) {
-    const isPos = packPositiveStrip === strip;
-    const isNeg = packNegativeStrip === strip;
+    const isPos = packPositiveGroup && packPositiveGroup.has(strip);
+    const isNeg = packNegativeGroup && packNegativeGroup.has(strip);
     document.getElementById('menu-separator-terminal').style.display = 'block';
     document.getElementById('menu-set-positive').style.display = isPos ? 'none' : 'flex';
     document.getElementById('menu-set-negative').style.display = isNeg ? 'none' : 'flex';
@@ -1349,8 +1394,8 @@ document.getElementById('menu-set-negative').addEventListener('click', (e) => {
 document.getElementById('menu-clear-terminal').addEventListener('click', (e) => {
   e.stopPropagation();
   if (selectedStrip) {
-    if (packPositiveStrip === selectedStrip) clearTerminal('positive');
-    else if (packNegativeStrip === selectedStrip) clearTerminal('negative');
+    if (packPositiveGroup && packPositiveGroup.has(selectedStrip)) clearTerminal('positive');
+    else if (packNegativeGroup && packNegativeGroup.has(selectedStrip)) clearTerminal('negative');
   }
   hideContextMenu();
 });
@@ -1390,105 +1435,62 @@ function updateAnalysis() {
   let isComplete = false;
 
   if (hasPositiveTerminal && hasNegativeTerminal && unconnectedCount === 0 && nickelStrips.length > 0) {
-    // Build graph: each cell is a node, strips are edges
-    // We need to figure out the S/P configuration
-    // Use Union-Find to detect parallel groups (cells connected on the same side)
-    // Then trace series path through the groups
+    // Model each cell as two terminal nodes (top, bottom).
+    // Strips merge same-side terminals via union-find.
+    // Each cell becomes an edge between its top-group and bottom-group.
+    // Cells sharing both groups are in parallel.
 
     const cellIndex = new Map();
     cells.forEach((c, i) => cellIndex.set(c, i));
 
-    // Parallel groups: cells connected by strips on the same end
-    // Cells sharing a top strip with same polarity facing up = parallel on +
-    // Cells sharing a bottom strip with same polarity facing down = parallel on -
-    // This is complex - use a simpler graph-based approach:
+    // Union-Find for 2*N terminal nodes: [0..N-1] = top, [N..2N-1] = bottom
+    const parent = Array.from({ length: totalCells * 2 }, (_, i) => i);
+    function find(x) {
+      while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+      return x;
+    }
+    function union(a, b) { parent[find(a)] = find(b); }
 
-    // Build adjacency list
-    const adj = Array.from({ length: totalCells }, () => []);
     for (const strip of nickelStrips) {
       const i1 = cellIndex.get(strip.userData.cell1);
       const i2 = cellIndex.get(strip.userData.cell2);
-      if (i1 !== undefined && i2 !== undefined) {
-        adj[i1].push({ to: i2, side: strip.userData.side, strip });
-        adj[i2].push({ to: i1, side: strip.userData.side, strip });
-      }
-    }
-
-    // Group cells connected on the same side into parallel groups
-    // Same-side connections mean cells are in parallel
-    const visited = new Array(totalCells).fill(false);
-    const parallelGroups = [];
-
-    function floodParallelGroup(startIdx, side) {
-      const group = new Set();
-      const queue = [startIdx];
-      while (queue.length > 0) {
-        const curr = queue.shift();
-        if (group.has(curr)) continue;
-        group.add(curr);
-        for (const edge of adj[curr]) {
-          if (edge.side === side && !group.has(edge.to)) {
-            queue.push(edge.to);
-          }
-        }
-      }
-      return group;
-    }
-
-    // Detect parallel groups per side
-    const topGroups = [];
-    const topAssigned = new Set();
-    for (let i = 0; i < totalCells; i++) {
-      if (topAssigned.has(i)) continue;
-      const topNeighbors = adj[i].filter(e => e.side === 'top');
-      if (topNeighbors.length > 0) {
-        const group = floodParallelGroup(i, 'top');
-        topGroups.push(group);
-        group.forEach(idx => topAssigned.add(idx));
-      }
-    }
-
-    const bottomGroups = [];
-    const bottomAssigned = new Set();
-    for (let i = 0; i < totalCells; i++) {
-      if (bottomAssigned.has(i)) continue;
-      const bottomNeighbors = adj[i].filter(e => e.side === 'bottom');
-      if (bottomNeighbors.length > 0) {
-        const group = floodParallelGroup(i, 'bottom');
-        bottomGroups.push(group);
-        group.forEach(idx => bottomAssigned.add(idx));
-      }
-    }
-
-    // Count unique parallel group sizes to estimate configuration
-    // Heuristic: find the most common group size as P, count series from total
-    const allGroups = [...topGroups, ...bottomGroups];
-    const groupSizes = allGroups.map(g => g.size);
-
-    if (groupSizes.length > 0) {
-      // Find most common group size
-      const sizeCount = {};
-      groupSizes.forEach(s => sizeCount[s] = (sizeCount[s] || 0) + 1);
-      const dominantP = parseInt(Object.entries(sizeCount).sort((a, b) => b[1] - a[1])[0][0]);
-      const estimatedS = Math.round(totalCells / dominantP);
-
-      if (estimatedS * dominantP === totalCells) {
-        configLabel = `${estimatedS}S${dominantP}P`;
-        const nominalV = (estimatedS * CELL_NOMINAL_VOLTAGE).toFixed(1);
-        const totalAh = (dominantP * CELL_CAPACITY_AH).toFixed(1);
-        configSubtitle = `${nominalV}V nominal, ${totalAh}Ah`;
-        isComplete = true;
+      if (i1 === undefined || i2 === undefined) continue;
+      if (strip.userData.side === 'top') {
+        union(i1, i2);
       } else {
-        configLabel = 'Custom';
-        configSubtitle = 'Non-uniform parallel groups';
-        isComplete = true;
+        union(i1 + totalCells, i2 + totalCells);
       }
+    }
+
+    // Each cell is an edge: (topGroup, bottomGroup)
+    // Cells with identical (topGroup, bottomGroup) are truly in parallel
+    const edgeGroups = new Map();
+    for (let i = 0; i < totalCells; i++) {
+      const tg = find(i);
+      const bg = find(i + totalCells);
+      const key = `${tg},${bg}`;
+      if (!edgeGroups.has(key)) edgeGroups.set(key, []);
+      edgeGroups.get(key).push(i);
+    }
+
+    const groups = [...edgeGroups.values()];
+    const groupSizes = groups.map(g => g.length);
+    const allSame = groupSizes.every(s => s === groupSizes[0]);
+
+    if (allSame && groups.length > 0) {
+      const S = groups.length;
+      const P = groupSizes[0];
+      configLabel = `${S}S${P}P`;
+      const nominalV = (S * CELL_NOMINAL_VOLTAGE).toFixed(1);
+      const totalAh = (P * CELL_CAPACITY_AH).toFixed(1);
+      configSubtitle = `${nominalV}V nominal, ${totalAh}Ah`;
+      isComplete = true;
+    } else if (groups.length > 0) {
+      configLabel = 'Custom';
+      configSubtitle = 'Non-uniform parallel groups';
+      isComplete = true;
     }
   }
-
-  const totalWeight = (totalCells * CELL_WEIGHT_G / 1000).toFixed(2);
-  const totalEnergy = (totalCells * CELL_NOMINAL_VOLTAGE * CELL_CAPACITY_AH).toFixed(1);
-  const totalNominalV = isComplete ? '' : (totalCells * CELL_NOMINAL_VOLTAGE).toFixed(1);
 
   let html = '';
 
@@ -1528,13 +1530,6 @@ function updateAnalysis() {
   html += `<div class="stat-row"><span class="stat-label">Pack &minus; terminal</span><span class="stat-value ${negClass}">${hasNegativeTerminal ? 'Assigned' : 'Missing'}</span></div>`;
   html += `</div>`;
 
-  // Estimated specs
-  html += `<div class="analyze-section">`;
-  html += `<div class="analyze-section-title">Estimated Specs (21700)</div>`;
-  html += `<div class="stat-row"><span class="stat-label">Cell weight</span><span class="stat-value">${totalWeight} kg</span></div>`;
-  html += `<div class="stat-row"><span class="stat-label">Total energy</span><span class="stat-value">${totalEnergy} Wh</span></div>`;
-  html += `<div class="stat-row"><span class="stat-label">Weld points</span><span class="stat-value">${nickelStrips.length * 2}</span></div>`;
-  html += `</div>`;
 
   container.innerHTML = html;
 }
