@@ -286,6 +286,116 @@
     transition: background 0.15s;
   }
   #share-toast button:hover { background: rgba(142, 202, 230, 0.35); }
+  #help-btn {
+    position: absolute;
+    bottom: 16px;
+    right: 100px;
+    z-index: 10;
+    background: rgba(142, 202, 230, 0.15);
+    border: 1px solid rgba(142, 202, 230, 0.4);
+    border-radius: 8px;
+    padding: 10px 18px;
+    color: #8ecae6;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #help-btn:hover {
+    background: rgba(142, 202, 230, 0.25);
+    color: #fff;
+  }
+  #help-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: rgba(10, 10, 20, 0.85);
+    backdrop-filter: blur(6px);
+    justify-content: center;
+    align-items: center;
+  }
+  #help-overlay.visible { display: flex; }
+  #help-panel {
+    background: rgba(30, 30, 50, 0.97);
+    border: 1px solid rgba(142, 202, 230, 0.3);
+    border-radius: 16px;
+    padding: 32px 36px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 64px rgba(0,0,0,0.6);
+  }
+  #help-panel h2 {
+    font-size: 20px;
+    color: #8ecae6;
+    margin-bottom: 6px;
+  }
+  #help-panel .help-subtitle {
+    font-size: 13px;
+    color: #777;
+    margin-bottom: 20px;
+  }
+  #help-panel h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #8ecae6;
+    margin: 18px 0 8px;
+  }
+  #help-panel h3:first-of-type { margin-top: 0; }
+  #help-panel p, #help-panel li {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #ccc;
+  }
+  #help-panel ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  #help-panel li { margin-bottom: 4px; }
+  kbd {
+    display: inline-block;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-family: inherit;
+    color: #e0e0e0;
+  }
+  #help-panel .help-close-row {
+    text-align: center;
+    margin-top: 22px;
+  }
+  #help-panel .help-close-row button {
+    background: rgba(142, 202, 230, 0.2);
+    border: 1px solid rgba(142, 202, 230, 0.4);
+    border-radius: 8px;
+    padding: 10px 32px;
+    color: #8ecae6;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #help-panel .help-close-row button:hover { background: rgba(142, 202, 230, 0.35); }
+  #help-panel .help-dismiss {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #777;
+  }
+  #help-panel .help-dismiss input { accent-color: #8ecae6; }
   #context-menu {
     display: none;
     position: absolute;
@@ -390,7 +500,67 @@
   Pack size: <span id="packSize">-</span>
 </div>
 
+<button id="help-btn">? Help</button>
 <button id="share-btn">&#x1F517; Share</button>
+
+<div id="help-overlay">
+  <div id="help-panel">
+    <h2>Battery Pack Designer</h2>
+    <div class="help-subtitle">Interactive 3D tool for designing battery packs with 21700 cells</div>
+
+    <h3>Navigation</h3>
+    <ul>
+      <li><strong>Left-click + drag</strong> to rotate the view</li>
+      <li><strong>Scroll wheel</strong> to zoom in/out</li>
+      <li><strong>Right-click + drag</strong> on empty space to pan</li>
+    </ul>
+
+    <h3>Pack Layout</h3>
+    <ul>
+      <li>Use the top-left panel to choose a <strong>layout</strong> (regular grid, staggered X, or staggered Y) and set the number of cells</li>
+    </ul>
+
+    <h3>Cell Options</h3>
+    <ul>
+      <li><strong>Right-click a cell</strong> to open its context menu</li>
+      <li><strong>Rotate Polarity</strong> flips a cell 180° so its positive and negative ends swap</li>
+    </ul>
+
+    <h3>Nickel Strips</h3>
+    <ul>
+      <li><strong>Right-click a cell</strong> and choose <strong>Connect Strip (Top)</strong> or <strong>Connect Strip (Bottom)</strong></li>
+      <li>Hover over another cell to preview the connection — all cells in the rectangular area between source and target are highlighted</li>
+      <li><strong>Click</strong> the target cell to place strips connecting every adjacent pair in both X and Y directions</li>
+      <li>Press <kbd>Esc</kbd> or right-click to cancel</li>
+      <li><strong>Right-click an existing strip</strong> to remove it</li>
+    </ul>
+
+    <h3>Pack Terminals</h3>
+    <ul>
+      <li><strong>Right-click a nickel strip</strong> and select <strong>Set as Pack + Terminal</strong> or <strong>Set as Pack - Terminal</strong></li>
+      <li>The strip changes color (red for +, blue for -) with a floating label</li>
+      <li>You can clear a terminal assignment from the same menu</li>
+    </ul>
+
+    <h3>Analysis</h3>
+    <ul>
+      <li>The left panel shows live stats: cell count, connections, terminal status, and estimated specs</li>
+      <li>Once all cells are connected and both terminals are assigned, the pack configuration is detected (e.g. 4S3P) with voltage and capacity</li>
+    </ul>
+
+    <h3>Sharing</h3>
+    <ul>
+      <li>Click the <strong>Share</strong> button to get a link that encodes your entire design in the URL — anyone who opens it sees the same pack</li>
+    </ul>
+
+    <div class="help-close-row">
+      <button id="help-close-btn">Got it</button>
+    </div>
+    <label class="help-dismiss">
+      <input type="checkbox" id="help-dismiss-check"> Don't show this on startup
+    </label>
+  </div>
+</div>
 
 <div id="share-toast">
   <p>Share this link to let others view your battery pack design:</p>
@@ -1517,6 +1687,30 @@ try {
 } catch (e) {
   console.warn('Failed to restore state from URL:', e);
   buildPack();
+}
+
+// --- Help overlay ---
+const helpOverlay = document.getElementById('help-overlay');
+
+function showHelp() {
+  helpOverlay.classList.add('visible');
+}
+
+function hideHelp() {
+  helpOverlay.classList.remove('visible');
+  if (document.getElementById('help-dismiss-check').checked) {
+    localStorage.setItem('bpd-hide-help', '1');
+  }
+}
+
+document.getElementById('help-btn').addEventListener('click', showHelp);
+document.getElementById('help-close-btn').addEventListener('click', hideHelp);
+helpOverlay.addEventListener('click', (e) => {
+  if (e.target === helpOverlay) hideHelp();
+});
+
+if (!localStorage.getItem('bpd-hide-help')) {
+  showHelp();
 }
 </script>
 </body>
