@@ -605,21 +605,18 @@ function getStripPairsForRect(cell1, cell2) {
   const minGY = Math.min(y1, y2), maxGY = Math.max(y1, y2);
 
   const pairs = [];
-  if (maxGX - minGX >= maxGY - minGY) {
-    for (let gy = minGY; gy <= maxGY; gy++) {
-      for (let gx = minGX; gx < maxGX; gx++) {
-        const a = getCellByGrid(gx, gy);
-        const b = getCellByGrid(gx + 1, gy);
-        if (a && b) pairs.push([a, b]);
-      }
+  for (let gy = minGY; gy <= maxGY; gy++) {
+    for (let gx = minGX; gx < maxGX; gx++) {
+      const a = getCellByGrid(gx, gy);
+      const b = getCellByGrid(gx + 1, gy);
+      if (a && b) pairs.push([a, b]);
     }
-  } else {
-    for (let gx = minGX; gx <= maxGX; gx++) {
-      for (let gy = minGY; gy < maxGY; gy++) {
-        const a = getCellByGrid(gx, gy);
-        const b = getCellByGrid(gx, gy + 1);
-        if (a && b) pairs.push([a, b]);
-      }
+  }
+  for (let gx = minGX; gx <= maxGX; gx++) {
+    for (let gy = minGY; gy < maxGY; gy++) {
+      const a = getCellByGrid(gx, gy);
+      const b = getCellByGrid(gx, gy + 1);
+      if (a && b) pairs.push([a, b]);
     }
   }
   return pairs;
@@ -1344,7 +1341,7 @@ function updateAnalysis() {
     html += `<div class="config-label">${configLabel}</div>`;
     html += `<div class="config-subtitle">${configSubtitle}</div>`;
   } else {
-    html += `<div style="text-align:center;margin-bottom:8px;"><span class="status-badge badge-incomplete">Incomplete</span></div>`;
+    html += `<div style="text-align:center;margin-bottom:8px;"><span class="status-badge badge-incomplete">Pack not yet complete</span></div>`;
   }
 
   // Cells section
