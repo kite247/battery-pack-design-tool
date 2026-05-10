@@ -289,7 +289,7 @@
   #help-btn {
     position: absolute;
     bottom: 16px;
-    right: 100px;
+    right: 116px;
     z-index: 10;
     background: rgba(142, 202, 230, 0.15);
     border: 1px solid rgba(142, 202, 230, 0.4);
@@ -386,16 +386,6 @@
     transition: background 0.15s;
   }
   #help-panel .help-close-row button:hover { background: rgba(142, 202, 230, 0.35); }
-  #help-panel .help-dismiss {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 10px;
-    font-size: 12px;
-    color: #777;
-  }
-  #help-panel .help-dismiss input { accent-color: #8ecae6; }
   #context-menu {
     display: none;
     position: absolute;
@@ -556,9 +546,6 @@
     <div class="help-close-row">
       <button id="help-close-btn">Got it</button>
     </div>
-    <label class="help-dismiss">
-      <input type="checkbox" id="help-dismiss-check"> Don't show this on startup
-    </label>
   </div>
 </div>
 
@@ -1698,9 +1685,6 @@ function showHelp() {
 
 function hideHelp() {
   helpOverlay.classList.remove('visible');
-  if (document.getElementById('help-dismiss-check').checked) {
-    localStorage.setItem('bpd-hide-help', '1');
-  }
 }
 
 document.getElementById('help-btn').addEventListener('click', showHelp);
@@ -1709,9 +1693,6 @@ helpOverlay.addEventListener('click', (e) => {
   if (e.target === helpOverlay) hideHelp();
 });
 
-if (!localStorage.getItem('bpd-hide-help')) {
-  showHelp();
-}
 </script>
 </body>
 </html>
