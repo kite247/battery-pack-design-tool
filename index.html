@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battery Pack Designer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    overflow: hidden;
+    height: 100vh;
+  }
+  #controls {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+    background: rgba(30, 30, 50, 0.92);
+    border: 1px solid rgba(100, 100, 140, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    width: 280px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  #controls h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    color: #8ecae6;
+    letter-spacing: 0.5px;
+  }
+  .control-group {
+    margin-bottom: 14px;
+  }
+  .control-group label {
+    display: block;
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  select, input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus, input[type="number"]:focus {
+    border-color: #8ecae6;
+  }
+  select option { background: #1a1a2e; }
+  .row {
+    display: flex;
+    gap: 10px;
+  }
+  .row .control-group { flex: 1; }
+  #info {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    z-index: 10;
+    background: rgba(30, 30, 50, 0.92);
+    border: 1px solid rgba(100, 100, 140, 0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    backdrop-filter: blur(12px);
+    font-size: 13px;
+    line-height: 1.6;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  #info span { color: #8ecae6; font-weight: 600; }
+  #analyze {
+    position: absolute;
+    top: 210px;
+    left: 16px;
+    z-index: 10;
+    background: rgba(30, 30, 50, 0.92);
+    border: 1px solid rgba(100, 100, 140, 0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    width: 280px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    font-size: 13px;
+    line-height: 1.7;
+    max-height: calc(100vh - 230px);
+    overflow-y: auto;
+  }
+  #analyze h3 {
+    font-size: 13px;
+    color: #8ecae6;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+  }
+  #analyze .config-label {
+    font-size: 22px;
+    font-weight: 700;
+    color: #8ecae6;
+    text-align: center;
+    margin: 8px 0 4px;
+    letter-spacing: 1px;
+  }
+  #analyze .config-subtitle {
+    text-align: center;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 10px;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(100,100,140,0.1);
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: #aaa; }
+  .stat-value { color: #e0e0e0; font-weight: 600; }
+  .stat-value.ok { color: #6c6; }
+  .stat-value.warn { color: #f0ad4e; }
+  .stat-value.error { color: #e63946; }
+  .analyze-section {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(100,100,140,0.2);
+  }
+  .analyze-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .analyze-section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #777;
+    margin-bottom: 4px;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-complete {
+    background: rgba(102, 204, 102, 0.15);
+    color: #6c6;
+    border: 1px solid rgba(102, 204, 102, 0.3);
+  }
+  .badge-incomplete {
+    background: rgba(240, 173, 78, 0.15);
+    color: #f0ad4e;
+    border: 1px solid rgba(240, 173, 78, 0.3);
+  }
+  #legend {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    background: rgba(30, 30, 50, 0.92);
+    border: 1px solid rgba(100, 100, 140, 0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    backdrop-filter: blur(12px);
+    font-size: 13px;
+    line-height: 1.8;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-positive { background: #e63946; }
+  .dot-negative { background: #2a2a2a; border: 1px solid #555; }
+  .dot-body { background: #4a90a4; }
+  .dot-wrap { background: #3a7a8a; }
+  .dot-nickel { background: #c0c0c0; border: 1px solid #888; }
+  canvas { display: block; }
+  #status-bar {
+    display: none;
+    position: absolute;
+    bottom: 60px;
+    right: 16px;
+    z-index: 10;
+    background: rgba(142, 202, 230, 0.15);
+    border: 1px solid rgba(142, 202, 230, 0.4);
+    border-radius: 8px;
+    padding: 12px 18px;
+    backdrop-filter: blur(12px);
+    font-size: 13px;
+    color: #8ecae6;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .menu-separator {
+    height: 1px;
+    background: rgba(100, 100, 140, 0.3);
+    margin: 4px 0;
+  }
+  #share-btn {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 10;
+    background: rgba(142, 202, 230, 0.15);
+    border: 1px solid rgba(142, 202, 230, 0.4);
+    border-radius: 8px;
+    padding: 10px 18px;
+    color: #8ecae6;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #share-btn:hover {
+    background: rgba(142, 202, 230, 0.25);
+    color: #fff;
+  }
+  #share-toast {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 200;
+    background: rgba(30, 30, 50, 0.95);
+    border: 1px solid rgba(142, 202, 230, 0.5);
+    border-radius: 12px;
+    padding: 20px 28px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+    text-align: center;
+    max-width: 400px;
+  }
+  #share-toast p {
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: #8ecae6;
+  }
+  #share-toast input {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 12px;
+    font-family: monospace;
+    outline: none;
+    margin-bottom: 12px;
+  }
+  #share-toast .toast-msg {
+    font-size: 12px;
+    color: #6c6;
+    min-height: 18px;
+  }
+  #share-toast button {
+    background: rgba(142, 202, 230, 0.2);
+    border: 1px solid rgba(142, 202, 230, 0.4);
+    border-radius: 6px;
+    padding: 7px 16px;
+    color: #8ecae6;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 0 4px;
+    transition: background 0.15s;
+  }
+  #share-toast button:hover { background: rgba(142, 202, 230, 0.35); }
+  #context-menu {
+    display: none;
+    position: absolute;
+    z-index: 100;
+    background: rgba(30, 30, 50, 0.95);
+    border: 1px solid rgba(100, 100, 140, 0.4);
+    border-radius: 8px;
+    padding: 4px 0;
+    min-width: 180px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  #context-menu .menu-item {
+    padding: 9px 16px;
+    font-size: 13px;
+    color: #e0e0e0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  #context-menu .menu-item:hover {
+    background: rgba(142, 202, 230, 0.15);
+    color: #8ecae6;
+  }
+  #context-menu .menu-icon {
+    font-size: 15px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <h2>Battery Pack Designer</h2>
+  <div class="control-group">
+    <label>Cell Layout</label>
+    <select id="layout">
+      <option value="grid">Regular Grid</option>
+      <option value="stagger-x">Staggered X</option>
+      <option value="stagger-y">Staggered Y</option>
+    </select>
+  </div>
+  <div class="row">
+    <div class="control-group">
+      <label>Cells X</label>
+      <input type="number" id="cellsX" value="4" min="1" max="30">
+    </div>
+    <div class="control-group">
+      <label>Cells Y</label>
+      <input type="number" id="cellsY" value="3" min="1" max="30">
+    </div>
+  </div>
+</div>
+
+<div id="analyze">
+  <h3>Analysis</h3>
+  <div id="analyze-content"></div>
+</div>
+
+<div id="legend">
+  <div class="legend-item"><div class="legend-dot dot-positive"></div> Positive terminal (+)</div>
+  <div class="legend-item"><div class="legend-dot dot-negative"></div> Negative terminal (&minus;)</div>
+  <div class="legend-item"><div class="legend-dot dot-body"></div> Cell body (21700)</div>
+  <div class="legend-item"><div class="legend-dot dot-nickel"></div> Nickel strip</div>
+</div>
+
+<div id="context-menu">
+  <div class="menu-item" id="menu-rotate-polarity">
+    <span class="menu-icon">&#x21C5;</span> Rotate Polarity
+  </div>
+  <div class="menu-separator"></div>
+  <div class="menu-item" id="menu-add-strip-top">
+    <span class="menu-icon">&#x2194;</span> Connect Strip (Top)
+  </div>
+  <div class="menu-item" id="menu-add-strip-bottom">
+    <span class="menu-icon">&#x2194;</span> Connect Strip (Bottom)
+  </div>
+  <div class="menu-item" id="menu-remove-strip" style="display:none;">
+    <span class="menu-icon">&#x2716;</span> Remove Nickel Strip
+  </div>
+  <div class="menu-separator" id="menu-separator-terminal"></div>
+  <div class="menu-item" id="menu-set-positive" style="display:none;">
+    <span class="menu-icon" style="color:#e63946;">+</span> Set as Pack + Terminal
+  </div>
+  <div class="menu-item" id="menu-set-negative" style="display:none;">
+    <span class="menu-icon" style="color:#6ea8fe;">&minus;</span> Set as Pack &minus; Terminal
+  </div>
+  <div class="menu-item" id="menu-clear-terminal" style="display:none;">
+    <span class="menu-icon">&#x21BA;</span> Clear Terminal Assignment
+  </div>
+</div>
+
+<div id="status-bar">Select second cell to complete nickel strip connection...</div>
+
+<div id="info">
+  Total cells: <span id="totalCells">12</span><br>
+  Pack size: <span id="packSize">-</span>
+</div>
+
+<button id="share-btn">&#x1F517; Share</button>
+
+<div id="share-toast">
+  <p>Share this link to let others view your battery pack design:</p>
+  <input type="text" id="share-url" readonly>
+  <div style="margin-bottom:8px;">
+    <button id="share-copy">Copy Link</button>
+    <button id="share-close">Close</button>
+  </div>
+  <div class="toast-msg" id="share-msg"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const CELL_DIAMETER = 21;
+const CELL_RADIUS = CELL_DIAMETER / 2;
+const CELL_HEIGHT = 70;
+const CELL_GAP = 1.5;
+const CELL_SPACING = CELL_DIAMETER + CELL_GAP;
+const POSITIVE_CAP_HEIGHT = 1.5;
+const POSITIVE_BUMP_HEIGHT = 1.2;
+const POSITIVE_BUMP_RADIUS = 3.5;
+const NEGATIVE_CAP_HEIGHT = 0.8;
+const WRAP_INSET = 0.15;
+const CELL_NOMINAL_VOLTAGE = 3.6;
+const CELL_CAPACITY_AH = 5.0;
+const CELL_WEIGHT_G = 70;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a2e);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
+camera.position.set(150, 200, 250);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 50;
+controls.maxDistance = 2000;
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+dirLight.position.set(200, 300, 150);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.near = 10;
+dirLight.shadow.camera.far = 1000;
+dirLight.shadow.camera.left = -300;
+dirLight.shadow.camera.right = 300;
+dirLight.shadow.camera.top = 300;
+dirLight.shadow.camera.bottom = -300;
+scene.add(dirLight);
+
+const fillLight = new THREE.DirectionalLight(0x8ecae6, 0.3);
+fillLight.position.set(-100, 50, -100);
+scene.add(fillLight);
+
+const bodyMaterial = new THREE.MeshStandardMaterial({
+  color: 0x4a90a4,
+  metalness: 0.6,
+  roughness: 0.35,
+});
+
+const wrapMaterial = new THREE.MeshStandardMaterial({
+  color: 0x3a7a8a,
+  metalness: 0.3,
+  roughness: 0.6,
+});
+
+const positiveMaterial = new THREE.MeshStandardMaterial({
+  color: 0xe63946,
+  metalness: 0.8,
+  roughness: 0.2,
+});
+
+const negativeMaterial = new THREE.MeshStandardMaterial({
+  color: 0x2a2a2a,
+  metalness: 0.85,
+  roughness: 0.15,
+});
+
+const ringMaterial = new THREE.MeshStandardMaterial({
+  color: 0x111111,
+  metalness: 0.5,
+  roughness: 0.5,
+});
+
+const radialSegments = 32;
+
+const bodyGeometry = new THREE.CylinderGeometry(
+  CELL_RADIUS, CELL_RADIUS, CELL_HEIGHT - POSITIVE_CAP_HEIGHT - NEGATIVE_CAP_HEIGHT, radialSegments
+);
+
+const wrapGeometry = new THREE.CylinderGeometry(
+  CELL_RADIUS + WRAP_INSET, CELL_RADIUS + WRAP_INSET,
+  CELL_HEIGHT - POSITIVE_CAP_HEIGHT - NEGATIVE_CAP_HEIGHT - 4, radialSegments
+);
+
+const posCapGeometry = new THREE.CylinderGeometry(
+  CELL_RADIUS, CELL_RADIUS, POSITIVE_CAP_HEIGHT, radialSegments
+);
+
+const posBumpGeometry = new THREE.CylinderGeometry(
+  POSITIVE_BUMP_RADIUS, POSITIVE_BUMP_RADIUS, POSITIVE_BUMP_HEIGHT, radialSegments
+);
+
+const negCapGeometry = new THREE.CylinderGeometry(
+  CELL_RADIUS, CELL_RADIUS, NEGATIVE_CAP_HEIGHT, radialSegments
+);
+
+const negInnerGeometry = new THREE.CylinderGeometry(
+  CELL_RADIUS - 1.5, CELL_RADIUS - 1.5, NEGATIVE_CAP_HEIGHT + 0.05, radialSegments
+);
+
+const insulatorGeometry = new THREE.RingGeometry(
+  CELL_RADIUS - 1.8, CELL_RADIUS + 0.1, radialSegments
+);
+
+function createCell() {
+  const group = new THREE.Group();
+
+  const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  const wrap = new THREE.Mesh(wrapGeometry, wrapMaterial);
+  wrap.castShadow = true;
+  group.add(wrap);
+
+  const bodyTop = (CELL_HEIGHT - POSITIVE_CAP_HEIGHT - NEGATIVE_CAP_HEIGHT) / 2;
+
+  const posCap = new THREE.Mesh(posCapGeometry, positiveMaterial);
+  posCap.position.y = bodyTop + POSITIVE_CAP_HEIGHT / 2;
+  posCap.castShadow = true;
+  group.add(posCap);
+
+  const posBump = new THREE.Mesh(posBumpGeometry, positiveMaterial);
+  posBump.position.y = bodyTop + POSITIVE_CAP_HEIGHT + POSITIVE_BUMP_HEIGHT / 2;
+  posBump.castShadow = true;
+  group.add(posBump);
+
+  const insulator = new THREE.Mesh(insulatorGeometry, ringMaterial);
+  insulator.rotation.x = -Math.PI / 2;
+  insulator.position.y = bodyTop + 0.05;
+  group.add(insulator);
+
+  const negCap = new THREE.Mesh(negCapGeometry, negativeMaterial);
+  negCap.position.y = -bodyTop - NEGATIVE_CAP_HEIGHT / 2;
+  negCap.castShadow = true;
+  group.add(negCap);
+
+  const negInner = new THREE.Mesh(negInnerGeometry, negativeMaterial);
+  negInner.position.y = -bodyTop - NEGATIVE_CAP_HEIGHT / 2;
+  group.add(negInner);
+
+  return group;
+}
+
+const highlightRingGeometry = new THREE.RingGeometry(CELL_RADIUS + 0.5, CELL_RADIUS + 2.5, 32);
+const highlightMaterial = new THREE.MeshBasicMaterial({
+  color: 0x8ecae6,
+  transparent: true,
+  opacity: 0.6,
+  side: THREE.DoubleSide,
+});
+let highlightRings = [];
+
+function getCellByGrid(gx, gy) {
+  return packGroup.children.find(c => c.userData.gridX === gx && c.userData.gridY === gy);
+}
+
+function getCellsInRect(cell1, cell2) {
+  const x1 = cell1.userData.gridX, y1 = cell1.userData.gridY;
+  const x2 = cell2.userData.gridX, y2 = cell2.userData.gridY;
+  const minGX = Math.min(x1, x2), maxGX = Math.max(x1, x2);
+  const minGY = Math.min(y1, y2), maxGY = Math.max(y1, y2);
+
+  const cells = [];
+  for (let gy = minGY; gy <= maxGY; gy++) {
+    for (let gx = minGX; gx <= maxGX; gx++) {
+      const cell = getCellByGrid(gx, gy);
+      if (cell) cells.push(cell);
+    }
+  }
+  return cells;
+}
+
+function getStripPairsForRect(cell1, cell2) {
+  const x1 = cell1.userData.gridX, y1 = cell1.userData.gridY;
+  const x2 = cell2.userData.gridX, y2 = cell2.userData.gridY;
+  const minGX = Math.min(x1, x2), maxGX = Math.max(x1, x2);
+  const minGY = Math.min(y1, y2), maxGY = Math.max(y1, y2);
+
+  const pairs = [];
+  if (maxGX - minGX >= maxGY - minGY) {
+    for (let gy = minGY; gy <= maxGY; gy++) {
+      for (let gx = minGX; gx < maxGX; gx++) {
+        const a = getCellByGrid(gx, gy);
+        const b = getCellByGrid(gx + 1, gy);
+        if (a && b) pairs.push([a, b]);
+      }
+    }
+  } else {
+    for (let gx = minGX; gx <= maxGX; gx++) {
+      for (let gy = minGY; gy < maxGY; gy++) {
+        const a = getCellByGrid(gx, gy);
+        const b = getCellByGrid(gx, gy + 1);
+        if (a && b) pairs.push([a, b]);
+      }
+    }
+  }
+  return pairs;
+}
+
+function clearHighlights() {
+  for (const ring of highlightRings) {
+    ring.parent?.remove(ring);
+    ring.geometry.dispose();
+  }
+  highlightRings = [];
+}
+
+function highlightCells(cells, side) {
+  clearHighlights();
+  const yPos = side === 'bottom'
+    ? -(CELL_HEIGHT / 2 + 1)
+    : (CELL_HEIGHT / 2 + 1);
+  for (const cell of cells) {
+    const ring = new THREE.Mesh(highlightRingGeometry, highlightMaterial);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = yPos;
+    cell.add(ring);
+    highlightRings.push(ring);
+  }
+}
+
+const nickelMaterial = new THREE.MeshStandardMaterial({
+  color: 0xc8c8c8,
+  metalness: 0.9,
+  roughness: 0.2,
+  side: THREE.DoubleSide,
+});
+
+const terminalPositiveMaterial = new THREE.MeshStandardMaterial({
+  color: 0xe63946,
+  metalness: 0.85,
+  roughness: 0.15,
+  side: THREE.DoubleSide,
+});
+
+const terminalNegativeMaterial = new THREE.MeshStandardMaterial({
+  color: 0x4a90d9,
+  metalness: 0.85,
+  roughness: 0.15,
+  side: THREE.DoubleSide,
+});
+
+const STRIP_WIDTH = 8;
+const STRIP_THICKNESS = 0.2;
+const STRIP_Y_TOP = CELL_HEIGHT / 2 + POSITIVE_BUMP_HEIGHT + 0.3;
+const STRIP_Y_BOTTOM = -(CELL_HEIGHT / 2 + NEGATIVE_CAP_HEIGHT + 0.3);
+
+let packPositiveStrip = null;
+let packNegativeStrip = null;
+
+const packGroup = new THREE.Group();
+scene.add(packGroup);
+
+const stripsGroup = new THREE.Group();
+scene.add(stripsGroup);
+
+const nickelStrips = [];
+
+const gridHelper = new THREE.GridHelper(500, 20, 0x333355, 0x222244);
+gridHelper.position.y = -CELL_HEIGHT / 2 - 2;
+scene.add(gridHelper);
+
+function createNickelStrip(cell1, cell2, side) {
+  const pos1 = cell1.position;
+  const pos2 = cell2.position;
+  const yOffset = side === 'bottom' ? STRIP_Y_BOTTOM : STRIP_Y_TOP;
+
+  const dx = pos2.x - pos1.x;
+  const dz = pos2.z - pos1.z;
+  const distance = Math.sqrt(dx * dx + dz * dz);
+  const angle = Math.atan2(dz, dx);
+
+  const padRadius = CELL_RADIUS - 2;
+  const shape = new THREE.Shape();
+  const totalLen = distance;
+  const halfW = STRIP_WIDTH / 2;
+
+  shape.moveTo(-padRadius, -halfW);
+  shape.lineTo(totalLen + padRadius, -halfW);
+  shape.absarc(totalLen, 0, padRadius + halfW * 0.3, -Math.PI * 0.45, Math.PI * 0.45, false);
+  shape.lineTo(totalLen + padRadius, halfW);
+  shape.lineTo(-padRadius, halfW);
+  shape.absarc(0, 0, padRadius + halfW * 0.3, Math.PI * 0.45, -Math.PI * 0.45, false);
+
+  const extrudeSettings = { depth: STRIP_THICKNESS, bevelEnabled: false };
+  const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+  const mesh = new THREE.Mesh(geometry, nickelMaterial);
+  mesh.userData.isStripMesh = true;
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.rotation.z = -angle;
+  mesh.position.set(pos1.x, yOffset, pos1.z);
+
+  const weldGeo = new THREE.CylinderGeometry(2, 2, STRIP_THICKNESS + 0.3, 16);
+  const weldMat = new THREE.MeshStandardMaterial({ color: 0x999999, metalness: 0.8, roughness: 0.4 });
+
+  const weldDir = side === 'bottom' ? -1 : 1;
+  const weld1 = new THREE.Mesh(weldGeo, weldMat);
+  weld1.position.set(pos1.x, yOffset + weldDir * STRIP_THICKNESS / 2, pos1.z);
+  weld1.castShadow = true;
+
+  const weld2 = new THREE.Mesh(weldGeo, weldMat);
+  weld2.position.set(pos2.x, yOffset + weldDir * STRIP_THICKNESS / 2, pos2.z);
+  weld2.castShadow = true;
+
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  const stripGroup = new THREE.Group();
+  stripGroup.add(mesh);
+  stripGroup.add(weld1);
+  stripGroup.add(weld2);
+
+  stripGroup.userData = { cell1, cell2, side };
+  stripsGroup.add(stripGroup);
+
+  nickelStrips.push(stripGroup);
+  updateAnalysis();
+  return stripGroup;
+}
+
+function removeNickelStrip(stripGroup) {
+  if (packPositiveStrip === stripGroup) clearTerminal('positive');
+  if (packNegativeStrip === stripGroup) clearTerminal('negative');
+  stripsGroup.remove(stripGroup);
+  const idx = nickelStrips.indexOf(stripGroup);
+  if (idx !== -1) nickelStrips.splice(idx, 1);
+  stripGroup.traverse((child) => {
+    if (child.geometry) child.geometry.dispose();
+  });
+  updateAnalysis();
+}
+
+function setTerminal(stripGroup, polarity) {
+  if (polarity === 'positive') {
+    if (packPositiveStrip) clearTerminal('positive');
+    if (packNegativeStrip === stripGroup) clearTerminal('negative');
+    packPositiveStrip = stripGroup;
+    applyTerminalVisual(stripGroup, terminalPositiveMaterial, '+', 0xe63946);
+  } else {
+    if (packNegativeStrip) clearTerminal('negative');
+    if (packPositiveStrip === stripGroup) clearTerminal('positive');
+    packNegativeStrip = stripGroup;
+    applyTerminalVisual(stripGroup, terminalNegativeMaterial, '−', 0x4a90d9);
+  }
+  updateAnalysis();
+}
+
+function clearTerminal(polarity) {
+  const strip = polarity === 'positive' ? packPositiveStrip : packNegativeStrip;
+  if (!strip) return;
+
+  if (polarity === 'positive') packPositiveStrip = null;
+  else packNegativeStrip = null;
+
+  const mainMesh = strip.children.find(c => c.userData.isStripMesh);
+  if (mainMesh) mainMesh.material = nickelMaterial;
+
+  for (let i = strip.children.length - 1; i >= 0; i--) {
+    if (strip.children[i].userData.isTerminalLabel) {
+      strip.children[i].geometry.dispose();
+      strip.children[i].material.dispose();
+      strip.remove(strip.children[i]);
+    }
+  }
+  updateAnalysis();
+}
+
+function applyTerminalVisual(stripGroup, material, symbol, color) {
+  const mainMesh = stripGroup.children.find(c => c.userData.isStripMesh);
+  if (mainMesh) mainMesh.material = material;
+
+  for (let i = stripGroup.children.length - 1; i >= 0; i--) {
+    if (stripGroup.children[i].userData.isTerminalLabel) {
+      stripGroup.children[i].geometry.dispose();
+      stripGroup.children[i].material.dispose();
+      stripGroup.remove(stripGroup.children[i]);
+    }
+  }
+
+  const cell1 = stripGroup.userData.cell1;
+  const cell2 = stripGroup.userData.cell2;
+  const side = stripGroup.userData.side;
+  const midX = (cell1.position.x + cell2.position.x) / 2;
+  const midZ = (cell1.position.z + cell2.position.z) / 2;
+  const labelY = side === 'bottom'
+    ? STRIP_Y_BOTTOM - 12
+    : STRIP_Y_TOP + 12;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath();
+  ctx.arc(64, 64, 60, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = `#${color.toString(16).padStart(6, '0')}`;
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  ctx.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+  ctx.font = 'bold 80px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(symbol, 64, 64);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.position.set(midX, labelY, midZ);
+  sprite.scale.set(14, 14, 1);
+  sprite.userData.isTerminalLabel = true;
+  stripGroup.add(sprite);
+}
+
+function getStripsForCell(cell) {
+  return nickelStrips.filter(s => s.userData.cell1 === cell || s.userData.cell2 === cell);
+}
+
+function findStripBetween(cell1, cell2, side) {
+  return nickelStrips.find(s =>
+    s.userData.side === side &&
+    ((s.userData.cell1 === cell1 && s.userData.cell2 === cell2) ||
+     (s.userData.cell1 === cell2 && s.userData.cell2 === cell1))
+  );
+}
+
+function buildPack() {
+  while (packGroup.children.length > 0) {
+    packGroup.remove(packGroup.children[0]);
+  }
+  while (stripsGroup.children.length > 0) {
+    stripsGroup.remove(stripsGroup.children[0]);
+  }
+  nickelStrips.length = 0;
+  packPositiveStrip = null;
+  packNegativeStrip = null;
+  stripConnectMode = false;
+  stripSourceCell = null;
+  document.getElementById('status-bar').style.display = 'none';
+
+  const layout = document.getElementById('layout').value;
+  const cellsX = Math.max(1, Math.min(30, parseInt(document.getElementById('cellsX').value) || 1));
+  const cellsY = Math.max(1, Math.min(30, parseInt(document.getElementById('cellsY').value) || 1));
+
+  const positions = [];
+
+  for (let iy = 0; iy < cellsY; iy++) {
+    for (let ix = 0; ix < cellsX; ix++) {
+      let x, z;
+
+      if (layout === 'grid') {
+        x = ix * CELL_SPACING;
+        z = iy * CELL_SPACING;
+      } else if (layout === 'stagger-x') {
+        const offset = (iy % 2 === 1) ? CELL_SPACING / 2 : 0;
+        x = ix * CELL_SPACING + offset;
+        z = iy * CELL_SPACING * (Math.sqrt(3) / 2);
+      } else {
+        const offset = (ix % 2 === 1) ? CELL_SPACING / 2 : 0;
+        x = ix * CELL_SPACING * (Math.sqrt(3) / 2);
+        z = iy * CELL_SPACING + offset;
+      }
+
+      positions.push({ x, z, ix, iy });
+    }
+  }
+
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const p of positions) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.z < minZ) minZ = p.z;
+    if (p.z > maxZ) maxZ = p.z;
+  }
+  const centerX = (minX + maxX) / 2;
+  const centerZ = (minZ + maxZ) / 2;
+
+  for (const p of positions) {
+    const cell = createCell();
+    cell.position.set(p.x - centerX, 0, p.z - centerZ);
+    cell.userData.gridX = p.ix;
+    cell.userData.gridY = p.iy;
+    packGroup.add(cell);
+  }
+
+  const totalCells = cellsX * cellsY;
+  document.getElementById('totalCells').textContent = totalCells;
+
+  const packW = ((maxX - minX) + CELL_DIAMETER).toFixed(1);
+  const packD = ((maxZ - minZ) + CELL_DIAMETER).toFixed(1);
+  document.getElementById('packSize').textContent = `${packW} × ${packD} × ${CELL_HEIGHT} mm`;
+
+  const maxDim = Math.max(maxX - minX, maxZ - minZ, CELL_HEIGHT);
+  const dist = maxDim * 2.2 + 100;
+  camera.position.set(dist * 0.6, dist * 0.7, dist * 0.8);
+  controls.target.set(0, 0, 0);
+  controls.update();
+  updateAnalysis();
+}
+
+// --- Raycasting & context menu ---
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const contextMenu = document.getElementById('context-menu');
+const statusBar = document.getElementById('status-bar');
+let selectedCell = null;
+let selectedStrip = null;
+let stripConnectMode = false;
+let stripSourceCell = null;
+let stripConnectSide = 'top';
+
+document.getElementById('layout').addEventListener('change', buildPack);
+document.getElementById('cellsX').addEventListener('input', buildPack);
+document.getElementById('cellsY').addEventListener('input', buildPack);
+
+buildPack();
+
+function getCellGroup(object) {
+  let current = object;
+  while (current) {
+    if (current.parent === packGroup) return current;
+    current = current.parent;
+  }
+  return null;
+}
+
+function getStripGroup(object) {
+  let current = object;
+  while (current) {
+    if (current.parent === stripsGroup) return current;
+    current = current.parent;
+  }
+  return null;
+}
+
+function hideContextMenu() {
+  contextMenu.style.display = 'none';
+  selectedCell = null;
+  selectedStrip = null;
+}
+
+function cancelStripMode() {
+  stripConnectMode = false;
+  stripSourceCell = null;
+  stripConnectSide = 'top';
+  clearHighlights();
+  statusBar.style.display = 'none';
+  renderer.domElement.style.cursor = 'default';
+}
+
+renderer.domElement.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+
+  if (stripConnectMode) {
+    cancelStripMode();
+    return;
+  }
+
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  const cellIntersects = raycaster.intersectObjects(packGroup.children, true);
+  const stripIntersects = raycaster.intersectObjects(stripsGroup.children, true);
+
+  const hitCell = cellIntersects.length > 0 ? getCellGroup(cellIntersects[0].object) : null;
+  const hitStrip = stripIntersects.length > 0 ? getStripGroup(stripIntersects[0].object) : null;
+
+  function showTerminalOptions(strip) {
+    const isPos = packPositiveStrip === strip;
+    const isNeg = packNegativeStrip === strip;
+    document.getElementById('menu-separator-terminal').style.display = 'block';
+    document.getElementById('menu-set-positive').style.display = isPos ? 'none' : 'flex';
+    document.getElementById('menu-set-negative').style.display = isNeg ? 'none' : 'flex';
+    document.getElementById('menu-clear-terminal').style.display = (isPos || isNeg) ? 'flex' : 'none';
+  }
+
+  function hideTerminalOptions() {
+    document.getElementById('menu-separator-terminal').style.display = 'none';
+    document.getElementById('menu-set-positive').style.display = 'none';
+    document.getElementById('menu-set-negative').style.display = 'none';
+    document.getElementById('menu-clear-terminal').style.display = 'none';
+  }
+
+  if (hitCell && !hitCell.userData.animating) {
+    selectedCell = hitCell;
+    selectedStrip = hitStrip;
+    document.getElementById('menu-rotate-polarity').style.display = 'flex';
+    document.getElementById('menu-add-strip-top').style.display = 'flex';
+    document.getElementById('menu-add-strip-bottom').style.display = 'flex';
+    document.getElementById('menu-remove-strip').style.display = hitStrip ? 'flex' : 'none';
+    contextMenu.querySelector('.menu-separator').style.display = 'block';
+    if (hitStrip) showTerminalOptions(hitStrip);
+    else hideTerminalOptions();
+    contextMenu.style.display = 'block';
+    contextMenu.style.left = e.clientX + 'px';
+    contextMenu.style.top = e.clientY + 'px';
+    menuOpenTime = performance.now();
+
+    const rect = contextMenu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      contextMenu.style.left = (e.clientX - rect.width) + 'px';
+    }
+    if (rect.bottom > window.innerHeight) {
+      contextMenu.style.top = (e.clientY - rect.height) + 'px';
+    }
+  } else if (hitStrip) {
+    selectedStrip = hitStrip;
+    selectedCell = null;
+    document.getElementById('menu-rotate-polarity').style.display = 'none';
+    document.getElementById('menu-add-strip-top').style.display = 'none';
+    document.getElementById('menu-add-strip-bottom').style.display = 'none';
+    document.getElementById('menu-remove-strip').style.display = 'flex';
+    contextMenu.querySelector('.menu-separator').style.display = 'block';
+    showTerminalOptions(hitStrip);
+    contextMenu.style.display = 'block';
+    contextMenu.style.left = e.clientX + 'px';
+    contextMenu.style.top = e.clientY + 'px';
+    menuOpenTime = performance.now();
+  } else {
+    hideContextMenu();
+  }
+});
+
+let menuOpenTime = 0;
+
+window.addEventListener('mousedown', (e) => {
+  if (contextMenu.style.display === 'block' && performance.now() - menuOpenTime > 100) {
+    const rect = contextMenu.getBoundingClientRect();
+    if (e.clientX < rect.left || e.clientX > rect.right ||
+        e.clientY < rect.top || e.clientY > rect.bottom) {
+      hideContextMenu();
+    }
+  }
+});
+
+// --- Strip connect mode: hover preview & click to connect ---
+renderer.domElement.addEventListener('mousemove', (e) => {
+  if (!stripConnectMode || !stripSourceCell) return;
+
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(packGroup.children, true);
+
+  if (intersects.length > 0) {
+    const cellGroup = getCellGroup(intersects[0].object);
+    if (cellGroup && cellGroup !== stripSourceCell) {
+      const rectCells = getCellsInRect(stripSourceCell, cellGroup);
+      highlightCells(rectCells, stripConnectSide);
+    } else {
+      clearHighlights();
+    }
+  } else {
+    clearHighlights();
+  }
+});
+
+renderer.domElement.addEventListener('click', (e) => {
+  if (!stripConnectMode) return;
+
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(packGroup.children, true);
+
+  if (intersects.length > 0) {
+    const cellGroup = getCellGroup(intersects[0].object);
+    if (cellGroup && cellGroup !== stripSourceCell) {
+      const pairs = getStripPairsForRect(stripSourceCell, cellGroup);
+      for (const [a, b] of pairs) {
+        if (!findStripBetween(a, b, stripConnectSide)) {
+          createNickelStrip(a, b, stripConnectSide);
+        }
+      }
+      cancelStripMode();
+    }
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (stripConnectMode) cancelStripMode();
+    hideContextMenu();
+  }
+});
+
+// --- Animated polarity rotation ---
+const activeAnimations = [];
+
+function animateRotation(cellGroup) {
+  cellGroup.userData.animating = true;
+  const startRotation = cellGroup.rotation.z;
+  const endRotation = startRotation + Math.PI;
+  const duration = 400;
+  const startTime = performance.now();
+
+  activeAnimations.push({ cellGroup, startRotation, endRotation, duration, startTime });
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+document.getElementById('menu-rotate-polarity').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (selectedCell && !selectedCell.userData.animating) {
+    animateRotation(selectedCell);
+  }
+  hideContextMenu();
+});
+
+document.getElementById('menu-add-strip-top').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (selectedCell) {
+    stripConnectMode = true;
+    stripSourceCell = selectedCell;
+    stripConnectSide = 'top';
+    statusBar.textContent = 'Select second cell to connect strip on TOP...';
+    statusBar.style.display = 'block';
+    renderer.domElement.style.cursor = 'crosshair';
+  }
+  hideContextMenu();
+});
+
+document.getElementById('menu-add-strip-bottom').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (selectedCell) {
+    stripConnectMode = true;
+    stripSourceCell = selectedCell;
+    stripConnectSide = 'bottom';
+    statusBar.textContent = 'Select second cell to connect strip on BOTTOM...';
+    statusBar.style.display = 'block';
+    renderer.domElement.style.cursor = 'crosshair';
+  }
+  hideContextMenu();
+});
+
+document.getElementById('menu-remove-strip').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (selectedStrip) {
+    removeNickelStrip(selectedStrip);
+  }
+  hideContextMenu();
+});
+
+document.getElementById('menu-set-positive').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (selectedStrip) {
+    setTerminal(selectedStrip, 'positive');
+  }
+  hideContextMenu();
+});
+
+document.getElementById('menu-set-negative').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (selectedStrip) {
+    setTerminal(selectedStrip, 'negative');
+  }
+  hideContextMenu();
+});
+
+document.getElementById('menu-clear-terminal').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (selectedStrip) {
+    if (packPositiveStrip === selectedStrip) clearTerminal('positive');
+    else if (packNegativeStrip === selectedStrip) clearTerminal('negative');
+  }
+  hideContextMenu();
+});
+
+function updateAnalysis() {
+  const container = document.getElementById('analyze-content');
+  const cells = packGroup.children;
+  const totalCells = cells.length;
+
+  if (totalCells === 0) {
+    container.innerHTML = '<span style="color:#777;">No cells placed.</span>';
+    return;
+  }
+
+  const connectedCells = new Set();
+  for (const strip of nickelStrips) {
+    connectedCells.add(strip.userData.cell1);
+    connectedCells.add(strip.userData.cell2);
+  }
+  const unconnectedCount = totalCells - connectedCells.size;
+
+  const topStrips = nickelStrips.filter(s => s.userData.side === 'top').length;
+  const bottomStrips = nickelStrips.filter(s => s.userData.side === 'bottom').length;
+
+  const flippedCount = cells.filter(c => {
+    const flips = Math.round(c.rotation.z / Math.PI) % 2;
+    return flips !== 0;
+  }).length;
+  const normalCount = totalCells - flippedCount;
+
+  const hasPositiveTerminal = !!packPositiveStrip;
+  const hasNegativeTerminal = !!packNegativeStrip;
+
+  // Build adjacency graph via nickel strips to detect series/parallel config
+  let configLabel = '';
+  let configSubtitle = '';
+  let isComplete = false;
+
+  if (hasPositiveTerminal && hasNegativeTerminal && unconnectedCount === 0 && nickelStrips.length > 0) {
+    // Build graph: each cell is a node, strips are edges
+    // We need to figure out the S/P configuration
+    // Use Union-Find to detect parallel groups (cells connected on the same side)
+    // Then trace series path through the groups
+
+    const cellIndex = new Map();
+    cells.forEach((c, i) => cellIndex.set(c, i));
+
+    // Parallel groups: cells connected by strips on the same end
+    // Cells sharing a top strip with same polarity facing up = parallel on +
+    // Cells sharing a bottom strip with same polarity facing down = parallel on -
+    // This is complex - use a simpler graph-based approach:
+
+    // Build adjacency list
+    const adj = Array.from({ length: totalCells }, () => []);
+    for (const strip of nickelStrips) {
+      const i1 = cellIndex.get(strip.userData.cell1);
+      const i2 = cellIndex.get(strip.userData.cell2);
+      if (i1 !== undefined && i2 !== undefined) {
+        adj[i1].push({ to: i2, side: strip.userData.side, strip });
+        adj[i2].push({ to: i1, side: strip.userData.side, strip });
+      }
+    }
+
+    // Group cells connected on the same side into parallel groups
+    // Same-side connections mean cells are in parallel
+    const visited = new Array(totalCells).fill(false);
+    const parallelGroups = [];
+
+    function floodParallelGroup(startIdx, side) {
+      const group = new Set();
+      const queue = [startIdx];
+      while (queue.length > 0) {
+        const curr = queue.shift();
+        if (group.has(curr)) continue;
+        group.add(curr);
+        for (const edge of adj[curr]) {
+          if (edge.side === side && !group.has(edge.to)) {
+            queue.push(edge.to);
+          }
+        }
+      }
+      return group;
+    }
+
+    // Detect parallel groups per side
+    const topGroups = [];
+    const topAssigned = new Set();
+    for (let i = 0; i < totalCells; i++) {
+      if (topAssigned.has(i)) continue;
+      const topNeighbors = adj[i].filter(e => e.side === 'top');
+      if (topNeighbors.length > 0) {
+        const group = floodParallelGroup(i, 'top');
+        topGroups.push(group);
+        group.forEach(idx => topAssigned.add(idx));
+      }
+    }
+
+    const bottomGroups = [];
+    const bottomAssigned = new Set();
+    for (let i = 0; i < totalCells; i++) {
+      if (bottomAssigned.has(i)) continue;
+      const bottomNeighbors = adj[i].filter(e => e.side === 'bottom');
+      if (bottomNeighbors.length > 0) {
+        const group = floodParallelGroup(i, 'bottom');
+        bottomGroups.push(group);
+        group.forEach(idx => bottomAssigned.add(idx));
+      }
+    }
+
+    // Count unique parallel group sizes to estimate configuration
+    // Heuristic: find the most common group size as P, count series from total
+    const allGroups = [...topGroups, ...bottomGroups];
+    const groupSizes = allGroups.map(g => g.size);
+
+    if (groupSizes.length > 0) {
+      // Find most common group size
+      const sizeCount = {};
+      groupSizes.forEach(s => sizeCount[s] = (sizeCount[s] || 0) + 1);
+      const dominantP = parseInt(Object.entries(sizeCount).sort((a, b) => b[1] - a[1])[0][0]);
+      const estimatedS = Math.round(totalCells / dominantP);
+
+      if (estimatedS * dominantP === totalCells) {
+        configLabel = `${estimatedS}S${dominantP}P`;
+        const nominalV = (estimatedS * CELL_NOMINAL_VOLTAGE).toFixed(1);
+        const totalAh = (dominantP * CELL_CAPACITY_AH).toFixed(1);
+        configSubtitle = `${nominalV}V nominal, ${totalAh}Ah`;
+        isComplete = true;
+      } else {
+        configLabel = 'Custom';
+        configSubtitle = 'Non-uniform parallel groups';
+        isComplete = true;
+      }
+    }
+  }
+
+  const totalWeight = (totalCells * CELL_WEIGHT_G / 1000).toFixed(2);
+  const totalEnergy = (totalCells * CELL_NOMINAL_VOLTAGE * CELL_CAPACITY_AH).toFixed(1);
+  const totalNominalV = isComplete ? '' : (totalCells * CELL_NOMINAL_VOLTAGE).toFixed(1);
+
+  let html = '';
+
+  // Status badge
+  if (isComplete) {
+    html += `<div style="text-align:center;margin-bottom:8px;"><span class="status-badge badge-complete">Pack Complete</span></div>`;
+    html += `<div class="config-label">${configLabel}</div>`;
+    html += `<div class="config-subtitle">${configSubtitle}</div>`;
+  } else {
+    html += `<div style="text-align:center;margin-bottom:8px;"><span class="status-badge badge-incomplete">Incomplete</span></div>`;
+  }
+
+  // Cells section
+  html += `<div class="analyze-section">`;
+  html += `<div class="analyze-section-title">Cells</div>`;
+  html += `<div class="stat-row"><span class="stat-label">Total cells</span><span class="stat-value">${totalCells}</span></div>`;
+  html += `<div class="stat-row"><span class="stat-label">Positive up</span><span class="stat-value">${normalCount}</span></div>`;
+  html += `<div class="stat-row"><span class="stat-label">Negative up (flipped)</span><span class="stat-value">${flippedCount}</span></div>`;
+  html += `</div>`;
+
+  // Connections section
+  html += `<div class="analyze-section">`;
+  html += `<div class="analyze-section-title">Connections</div>`;
+  html += `<div class="stat-row"><span class="stat-label">Total strips</span><span class="stat-value">${nickelStrips.length}</span></div>`;
+  html += `<div class="stat-row"><span class="stat-label">Top strips</span><span class="stat-value">${topStrips}</span></div>`;
+  html += `<div class="stat-row"><span class="stat-label">Bottom strips</span><span class="stat-value">${bottomStrips}</span></div>`;
+  const unconnClass = unconnectedCount === 0 ? 'ok' : 'warn';
+  html += `<div class="stat-row"><span class="stat-label">Unconnected cells</span><span class="stat-value ${unconnClass}">${unconnectedCount}</span></div>`;
+  html += `</div>`;
+
+  // Terminals section
+  html += `<div class="analyze-section">`;
+  html += `<div class="analyze-section-title">Terminals</div>`;
+  const posClass = hasPositiveTerminal ? 'ok' : 'error';
+  const negClass = hasNegativeTerminal ? 'ok' : 'error';
+  html += `<div class="stat-row"><span class="stat-label">Pack + terminal</span><span class="stat-value ${posClass}">${hasPositiveTerminal ? 'Assigned' : 'Missing'}</span></div>`;
+  html += `<div class="stat-row"><span class="stat-label">Pack &minus; terminal</span><span class="stat-value ${negClass}">${hasNegativeTerminal ? 'Assigned' : 'Missing'}</span></div>`;
+  html += `</div>`;
+
+  // Estimated specs
+  html += `<div class="analyze-section">`;
+  html += `<div class="analyze-section-title">Estimated Specs (21700)</div>`;
+  html += `<div class="stat-row"><span class="stat-label">Cell weight</span><span class="stat-value">${totalWeight} kg</span></div>`;
+  html += `<div class="stat-row"><span class="stat-label">Total energy</span><span class="stat-value">${totalEnergy} Wh</span></div>`;
+  html += `<div class="stat-row"><span class="stat-label">Weld points</span><span class="stat-value">${nickelStrips.length * 2}</span></div>`;
+  html += `</div>`;
+
+  container.innerHTML = html;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  for (let i = activeAnimations.length - 1; i >= 0; i--) {
+    const anim = activeAnimations[i];
+    const elapsed = performance.now() - anim.startTime;
+    const t = Math.min(elapsed / anim.duration, 1);
+    const eased = easeInOutCubic(t);
+
+    anim.cellGroup.rotation.z = anim.startRotation + (anim.endRotation - anim.startRotation) * eased;
+
+    if (t >= 1) {
+      anim.cellGroup.rotation.z = anim.endRotation;
+      anim.cellGroup.userData.animating = false;
+      activeAnimations.splice(i, 1);
+      updateAnalysis();
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// --- Share: serialize/deserialize state via URL hash ---
+
+function serializeState() {
+  const layout = document.getElementById('layout').value;
+  const cellsX = parseInt(document.getElementById('cellsX').value) || 1;
+  const cellsY = parseInt(document.getElementById('cellsY').value) || 1;
+
+  const cells = packGroup.children;
+  const polarities = [];
+  for (let i = 0; i < cells.length; i++) {
+    const flips = Math.round(cells[i].rotation.z / Math.PI) % 2;
+    polarities.push(flips ? 1 : 0);
+  }
+
+  const strips = nickelStrips.map(s => {
+    const i1 = packGroup.children.indexOf(s.userData.cell1);
+    const i2 = packGroup.children.indexOf(s.userData.cell2);
+    const side = s.userData.side === 'bottom' ? 'b' : 't';
+    let terminal = '';
+    if (packPositiveStrip === s) terminal = '+';
+    else if (packNegativeStrip === s) terminal = '-';
+    return `${i1}.${i2}.${side}${terminal}`;
+  });
+
+  const state = {
+    l: layout,
+    x: cellsX,
+    y: cellsY,
+    p: polarities.join(''),
+    s: strips,
+  };
+
+  return btoa(JSON.stringify(state));
+}
+
+function deserializeState(encoded) {
+  try {
+    const state = JSON.parse(atob(encoded));
+
+    document.getElementById('layout').value = state.l;
+    document.getElementById('cellsX').value = state.x;
+    document.getElementById('cellsY').value = state.y;
+
+    buildPack();
+
+    if (state.p) {
+      const cells = packGroup.children;
+      for (let i = 0; i < state.p.length && i < cells.length; i++) {
+        if (state.p[i] === '1') {
+          cells[i].rotation.z = Math.PI;
+        }
+      }
+    }
+
+    if (state.s && state.s.length > 0) {
+      const cells = packGroup.children;
+      for (const entry of state.s) {
+        const parts = entry.split('.');
+        const i1 = parseInt(parts[0]);
+        const i2 = parseInt(parts[1]);
+        const sideTerminal = parts[2];
+        const side = sideTerminal[0] === 'b' ? 'bottom' : 'top';
+        const terminal = sideTerminal.length > 1 ? sideTerminal[1] : '';
+
+        if (i1 >= 0 && i1 < cells.length && i2 >= 0 && i2 < cells.length) {
+          const strip = createNickelStrip(cells[i1], cells[i2], side);
+          if (terminal === '+') setTerminal(strip, 'positive');
+          else if (terminal === '-') setTerminal(strip, 'negative');
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load shared state:', e);
+  }
+}
+
+document.getElementById('share-btn').addEventListener('click', () => {
+  const encoded = serializeState();
+  const url = window.location.origin + window.location.pathname + '#' + encoded;
+  document.getElementById('share-url').value = url;
+  document.getElementById('share-msg').textContent = '';
+  document.getElementById('share-toast').style.display = 'block';
+});
+
+document.getElementById('share-copy').addEventListener('click', () => {
+  const urlInput = document.getElementById('share-url');
+  urlInput.select();
+  navigator.clipboard.writeText(urlInput.value).then(() => {
+    document.getElementById('share-msg').textContent = 'Copied to clipboard!';
+  }).catch(() => {
+    document.getElementById('share-msg').textContent = 'Press Ctrl+C to copy';
+  });
+});
+
+document.getElementById('share-close').addEventListener('click', () => {
+  document.getElementById('share-toast').style.display = 'none';
+});
+
+try {
+  if (window.location.hash.length > 1) {
+    deserializeState(window.location.hash.substring(1));
+  }
+} catch (e) {
+  console.warn('Failed to restore state from URL:', e);
+  buildPack();
+}
+</script>
+</body>
+</html>
